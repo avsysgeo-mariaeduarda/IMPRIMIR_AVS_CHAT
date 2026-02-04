@@ -10,7 +10,7 @@
 <script src="https://fileschat.sfo2.cdn.digitaloceanspaces.com/public/libs/wlclient.js"></script>
 
 <script>
-/*
+
 window.WlExtension.initialize({
     buttons: {
       'attendance-view': [
@@ -28,118 +28,7 @@ window.WlExtension.initialize({
       ]
     }
   });
-*/
-  
-  function popupImprimirHTML() {
 
-    return `
-      <div>
-        <div><b>IMPRIMIR ARQUIVOS:</b></div>
-        <br/>
-
-        <label>
-          <input id="impHoje" type="checkbox" />
-          HOJE
-        </label>
-
-        <br/><br/>
-        <div><b>OU</b></div>
-        <br/>
-
-        <div>
-          <div>DO DIA:</div>
-          <input id="impDe" type="text" maxlength="8" placeholder="00/00/00" inputmode="numeric" />
-        </div>
-
-        <br/>
-
-        <div>
-          <div>ATÉ DIA:</div>
-          <input id="impAte" type="text" maxlength="8" placeholder="00/00/00" inputmode="numeric" />
-        </div>
-
-        <br/>
-        <div>Formato: <b>00/00/00</b></div>
-      </div>
-    `;
-  }
-
-  function maskDDMMYY(inputEl) {
-    if (!inputEl) return;
-
-    inputEl.addEventListener("input", () => {
-      const digits = String(inputEl.value || "").replace(/\D/g, "").slice(0, 6);
-
-      let out = "";
-      for (let i = 0; i < digits.length; i++) {
-        out += digits[i];
-        if (i === 1 || i === 3) out += "/"; 
-      }
-
-      inputEl.value = out.slice(0, 8);
-    });
-  }
-
-  function setupPopupImprimir() {
-    const chkHoje = document.getElementById("impHoje");
-    const inpDe = document.getElementById("impDe");
-    const inpAte = document.getElementById("impAte");
-
-    maskDDMMYY(inpDe);
-    maskDDMMYY(inpAte);
-
-    if (chkHoje) {
-      chkHoje.addEventListener("change", () => {
-        const on = chkHoje.checked === true;
-        if (inpDe) {
-          inpDe.disabled = on;
-          if (on) inpDe.value = "";
-        }
-        if (inpAte) {
-          inpAte.disabled = on;
-          if (on) inpAte.value = "";
-        }
-      });
-    }
-  }
-
-  function abrirPopupImprimir() {
-    window.WlExtension.confirmDialog({
-      title: "IMPRIMIR",
-      text: popupImprimirHTML(),
-      callback: (ok) => {
-        if (!ok) return;
-
-        const hoje = document.getElementById("impHoje")?.checked === true;
-        const de = (document.getElementById("impDe")?.value || "").trim();
-        const ate = (document.getElementById("impAte")?.value || "").trim();
-
-        window.WlExtension.alert({
-          message: hoje
-            ? "Selecionado: HOJE"
-            : ("Selecionado: PERÍODO\nDO DIA: " + (de || "—") + "\nATÉ DIA: " + (ate || "—")),
-          variant: "info"
-        });
-      }
-    });
-
-
-    setTimeout(setupPopupImprimir, 50);
-  }
-
-  window.WlExtension.initialize({
-    buttons: {
-      "attendance-view": [
-        {
-          icon_url: "https://img.icons8.com/material-sharp/15/000000/print.png",
-          text: "IMPRIMIR",
-          callback: () => {
-            abrirPopupImprimir();
-          }
-        }
-      ]
-    }
-  });
 </script>
 
 </body>
