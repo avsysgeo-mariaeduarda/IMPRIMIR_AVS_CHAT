@@ -3,31 +3,180 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Botão Imprimir</title>
+  <title>IMPRIMIR</title>
 </head>
 <body>
 
 <script src="https://fileschat.sfo2.cdn.digitaloceanspaces.com/public/libs/wlclient.js"></script>
 
 <script>
+ 
+  const N8N_ENDPOINT = "https://n8n.srv1157562.hstgr.cloud/webhook/imprimir_historico";
 
-window.WlExtension.initialize({
-    buttons: {
-      'attendance-view': [
-        {
-          icon_url: 'https://img.icons8.com/material-sharp/15/000000/print.png',
-          text: 'IMPRIMIR',
-          callback: () => {
-            
-            window.WlExtension.alert({
-              message: 'Botão IMPRIMIR acionado.',
-              variant: 'info'
-            });
-          }
-        }
-      ]
+  function getParam(name) {
+    try { return new URL(window.location.href).searchParams.get(name); }
+    catch (_) { return null; }
+  }
+
+  function parseDia(v) {
+    v = String(v || "").trim();
+    const m = v.match(/^(\d{2})\/(\d{2})\/(\d{2}|\d{4})$/);
+    if (!m) return { ok:false, error:"Use DD/MM/AA (ex: 02/02/26) ou DD/MM/AAAA." };
+
+    const dd = Number(m[1]);
+    const mm = Number(m[2]);
+    let yyyy = Number(m[3]);
+    if (m[3].length === 2) yyyy = 2000 + yyyy;
+
+    const d = new Date(yyyy, mm - 1, dd);
+    const ok =
+      d.getFullYear() === yyyy &&
+      d.getMonth() === (mm - 1) &&
+      d.getDate() === dd;
+
+    if (!ok) return { ok:false, error:"Data inválida." };
+
+    return {
+      ok:true,
+      display: `${m[1]}/${m[2]}/${yyyy}`, // DD/MM/AAAA
+      short: `${m[1]}/${m[2]}/${String(yyyy).slice(-2)}` // DD/MM/AA
+    };
+  }
+
+  function abrirPrintWindow(html) {
+    const win = window.open("", "_blank");
+    if (!win) {
+      window.WlExtension.alert({ message: "Permita pop-ups para imprimir.", variant: "error" });
+      return;
     }
-  });
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }
+
+  async function chamarN8n(payload) {
+    const res = await fetch(N8N_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const body = await res.text();
+    if (!res.ok) throw new Error(body || `HTTP ${res.status}`);
+
+    return body;
+  }
+
+
+  function renderModal() {
+    document.body.innerHTML = `
+      <div>
+        <strong>Imprimir histórico</strong><br><br>
+
+        DIA ESCOLHIDO (DD/MM/AA)<br>
+        <input id="dia" placeholder="02/02/26" maxlength="10"><br><br>
+
+        <button id="enviar">ENVIAR</button>
+        <button id="cancelar">CANCELAR</button>
+
+        <div id="msg"></div>
+      </div>
+    `;
+
+    const attendanceId = getParam("attendanceId") || "";
+    const contactId = getParam("contactId") || "";
+    const msgEl = document.getElementById("msg");
+    const diaEl = document.getElementById("dia");
+    const btnEnviar = document.getElementById("enviar");
+    const btnCancelar = document.getElementById("cancelar");
+
+    function setMsg(t) { msgEl.textContent = t || ""; }
+
+    // Máscara simples DD/MM/AA(AA)
+    diaEl.addEventListener("input", () => {
+      let v = String(diaEl.value || "").replace(/[^\d]/g, "");
+      if (v.length > 2) v = v.slice(0,2) + "/" + v.slice(2);
+      if (v.length > 5) v = v.slice(0,5) + "/" + v.slice(5);
+      diaEl.value = v.slice(0,10);
+      setMsg("");
+    });
+
+    btnCancelar.onclick = () => window.WlExtension.closeModal({ cancelled: true });
+
+    btnEnviar.onclick = async () => {
+      const parsed = parseDia(diaEl.value);
+      if (!parsed.ok) { setMsg(parsed.error); return; }
+
+      btnEnviar.disabled = true;
+      btnCancelar.disabled = true;
+      setMsg("Gerando histórico...");
+
+      try {
+        const html = await chamarN8n({
+          attendanceId,
+          contactId,
+          dia: parsed.display,
+          diaCurto: parsed.short,
+
+          numero: "@contato.numero",
+          token: "@canal.token",
+          dataFim: "@chat.datahora.fim",
+          protocolo: "@chat.codigo"
+        });
+
+        window.WlExtension.closeModal({ html });
+
+      } catch (e) {
+        window.WlExtension.closeModal({ error: String(e.message || e) });
+      }
+    };
+  }
+
+  function initExtension() {
+    window.WlExtension.initialize({
+      buttons: {
+        "attendance-view": [
+          {
+            icon_url: "https://img.icons8.com/material-sharp/15/000000/print.png",
+            text: "IMPRIMIR",
+            callback: (atendimento) => {
+              const attendanceId = atendimento?.attendanceId || atendimento?.id || "";
+              const contactId = atendimento?.contactId || atendimento?.contato?.codigo || "";
+
+              const baseUrl = window.location.href.split("?")[0];
+              const url =
+                `${baseUrl}?mode=modal` +
+                `&attendanceId=${encodeURIComponent(attendanceId)}` +
+                `&contactId=${encodeURIComponent(contactId)}`;
+
+              window.WlExtension.modal({
+                title: "Imprimir histórico",
+                url,
+                maxWidth: "420px",
+                height: "240px",
+                callback: (ret) => {
+                  if (!ret || ret.cancelled) return;
+
+                  if (ret.error) {
+                    window.WlExtension.alert({ message: ret.error, variant: "error" });
+                    return;
+                  }
+
+                  if (ret.html) {
+                    abrirPrintWindow(ret.html);
+                  }
+                }
+              });
+            }
+          }
+        ]
+      }
+    });
+  }
+
+  const mode = getParam("mode");
+  if (mode === "modal") renderModal();
+  else initExtension();
 
 </script>
 
