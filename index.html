@@ -42,10 +42,6 @@ function renderModal() {
     font-size: 13px;
   }
 
-  button:hover {
-    opacity: 0.9;
-  }
-
   .box {
     margin-top: 12px;
   }
@@ -89,18 +85,15 @@ function renderModal() {
         </div>
       </div>
 
-      <div id="box-data" class="box" style="display:none;">
-        
+      <div id="box-data" class="box" style="display:none;">        
         <p>INSIRA DIA ESCOLHIDO (DD/MM/AA)</p>   
         <div>                     
           <input id="inp-data" placeholder="00/00/00" maxlength="8">   
         </div>     
-
         <div class="row">
           <button id="btn-enviar">CONFIRMAR</button>
           <button id="btn-cancelar">CANCELAR</button>
         </div>
-
         <div id="msg" class="msg"></div>
       </div>
     </div>
