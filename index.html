@@ -21,13 +21,14 @@ function getParam(name) {
 
 function renderModal() {
   document.body.innerHTML = `
-    <style>
-      body {
-        font-family: Arial, Helvetica, sans-serif;
-      }
+    body { font-family: Arial, Helvetica, sans-serif; margin: 0; }
 
       .container {
         padding: 12px 16px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
       }
 
       .actions {
@@ -46,22 +47,9 @@ function renderModal() {
         font-size: 13px;
       }
 
-      .box {
-        margin-top: 12px;
-      }
+      .box { margin-top: 12px; }
 
-      .row {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-        margin-top: 10px;
-      }
-
-      .col {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
+      .col { display: flex; flex-direction: column; gap: 6px; }
 
       input {
         padding: 6px;
@@ -69,42 +57,46 @@ function renderModal() {
         border: 1px solid #000;
       }
 
-      .msg {
-        margin-top: 6px;
-        color: #b00020;
-        font-size: 12px;
+      .msg { margin-top: 6px; color: #b00020; font-size: 12px; }
+
+      /* empurra o footer para o fim */
+      .content {
+        flex: 1;
+      }
+
+      /* barra de botões no fim */
+      .footer {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-start;
+        padding-top: 12px;
       }
     </style>
 
     <div class="container">
-
       <div class="actions">
         <button id="btn-hoje" type="button">HOJE</button>
         <button id="btn-anteriores" type="button">DIAS ANTERIORES</button>
       </div>
 
-      <div id="box-hoje" class="box" style="display:none;">
-        <p>Será impresso o histórico da conversa de hoje.</p>
-        <div class="row">
-          <button id="btn-confirmar-hoje" type="button">CONFIRMAR</button>
-          <button id="btn-cancelar-hoje" type="button">CANCELAR</button>
+      <div class="content">
+        <div id="box-hoje" class="box" style="display:none;">
+          <p>Será impresso o histórico da conversa de hoje.</p>
+        </div>
+
+        <div id="box-data" class="box" style="display:none;">
+          <div class="col">
+            <p>Insira dia escolhido (DD/MM/AA)</p>
+            <input id="inp-data" placeholder="00/00/00" maxlength="8">
+          </div>
+          <div id="msg" class="msg"></div>
         </div>
       </div>
 
-      <div id="box-data" class="box" style="display:none;">
-        <div class="col">
-          <p>Insira dia escolhido (DD/MM/AA)</p>
-          <input id="inp-data" placeholder="00/00/00" maxlength="8">
-        </div>
-
-        <div class="row">
-          <button id="btn-enviar" type="button">CONFIRMAR</button>
-          <button id="btn-cancelar" type="button">CANCELAR</button>
-        </div>
-
-        <div id="msg" class="msg"></div>
+      <div class="footer">
+        <button id="btn-confirmar" type="button">CONFIRMAR</button>
+        <button id="btn-cancelar" type="button">CANCELAR</button>
       </div>
-
     </div>
   `;
 
