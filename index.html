@@ -10,174 +10,228 @@
 <script src="https://fileschat.sfo2.cdn.digitaloceanspaces.com/public/libs/wlclient.js"></script>
 
 <script>
- 
-  const N8N_ENDPOINT = "https://n8n.srv1157562.hstgr.cloud/webhook/imprimir_historico";
-
   function getParam(name) {
     try { return new URL(window.location.href).searchParams.get(name); }
     catch (_) { return null; }
   }
 
-  function parseDia(v) {
-    v = String(v || "").trim();
-    const m = v.match(/^(\d{2})\/(\d{2})\/(\d{2}|\d{4})$/);
-    if (!m) return { ok:false, error:"Use DD/MM/AA (ex: 02/02/26) ou DD/MM/AAAA." };
-
-    const dd = Number(m[1]);
-    const mm = Number(m[2]);
-    let yyyy = Number(m[3]);
-    if (m[3].length === 2) yyyy = 2000 + yyyy;
-
-    const d = new Date(yyyy, mm - 1, dd);
-    const ok =
-      d.getFullYear() === yyyy &&
-      d.getMonth() === (mm - 1) &&
-      d.getDate() === dd;
-
-    if (!ok) return { ok:false, error:"Data inválida." };
-
-    return {
-      ok:true,
-      display: `${m[1]}/${m[2]}/${yyyy}`, // DD/MM/AAAA
-      short: `${m[1]}/${m[2]}/${String(yyyy).slice(-2)}` // DD/MM/AA
-    };
+function renderModal() {
+  document.body.innerHTML = `
+    <style>
+  body {
+    font-family: Arial, Helvetica, sans-serif;
   }
 
-  function abrirPrintWindow(html) {
-    const win = window.open("", "_blank");
-    if (!win) {
-      window.WlExtension.alert({ message: "Permita pop-ups para imprimir.", variant: "error" });
-      return;
-    }
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
+  .container {
+    padding: 12px 16px;
   }
 
-  async function chamarN8n(payload) {
-    const res = await fetch(N8N_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    const body = await res.text();
-    if (!res.ok) throw new Error(body || `HTTP ${res.status}`);
-
-    return body;
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
   }
 
+  button {
+    padding: 6px 14px;
+    cursor: pointer;
+    background-color: #192d3e;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+  }
 
-  function renderModal() {
-    document.body.innerHTML = `
-      <div>
-        <strong>Imprimir histórico</strong><br><br>
+  button:hover {
+    opacity: 0.9;
+  }
 
-        DIA ESCOLHIDO (DD/MM/AA)<br>
-        <input id="dia" placeholder="02/02/26" maxlength="10"><br><br>
+  .box {
+    margin-top: 12px;
+  }
 
-        <button id="enviar">ENVIAR</button>
-        <button id="cancelar">CANCELAR</button>
+  .row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
 
-        <div id="msg"></div>
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  input {
+    padding: 6px;
+    width: 110px;
+  }
+
+  .msg {
+    margin-top: 6px;
+    color: #b00020;
+    font-size: 12px;
+  }
+</style>
+
+
+    <div class="container">
+      <div class="actions">
+        <button id="btn-hoje">HOJE</button>
+        <button id="btn-anteriores">DIAS ANTERIORES</button>
       </div>
-    `;
 
-    const attendanceId = getParam("attendanceId") || "";
-    const contactId = getParam("contactId") || "";
+      <div id="box-hoje" class="box" style="display:none;">
+        <p>Ao prosseguir, será impresso o histórico da conversa de hoje.</p> 
+        <div class="row">
+          <button id="btn-confirmar-hoje">CONFIRMAR</button>
+          <button id="btn-cancelar-hoje">CANCELAR</button>
+        </div>
+      </div>
+
+      <div id="box-data" class="box" style="display:none;">
+
+        <div class="col">
+          <p>INSIRA DIA ESCOLHIDO (DD/MM/AA)</p>              
+          <input id="inp-data" placeholder="00/00/00" maxlength="8">   
+        </div>     
+
+        <div class="row">
+          <button id="btn-enviar">CONFIRMAR</button>
+          <button id="btn-cancelar">CANCELAR</button>
+        </div>
+
+        <div id="msg" class="msg"></div>
+      </div>
+    </div>
+  `;
+
+    const btnHoje = document.getElementById("btn-hoje");
+    const btnAnt = document.getElementById("btn-anteriores");
+
+    const boxData = document.getElementById("box-data");
+    const inpData = document.getElementById("inp-data");
     const msgEl = document.getElementById("msg");
-    const diaEl = document.getElementById("dia");
-    const btnEnviar = document.getElementById("enviar");
-    const btnCancelar = document.getElementById("cancelar");
 
-    function setMsg(t) { msgEl.textContent = t || ""; }
+    const boxHoje = document.getElementById("box-hoje");
 
-    // Máscara simples DD/MM/AA(AA)
-    diaEl.addEventListener("input", () => {
-      let v = String(diaEl.value || "").replace(/[^\d]/g, "");
-      if (v.length > 2) v = v.slice(0,2) + "/" + v.slice(2);
-      if (v.length > 5) v = v.slice(0,5) + "/" + v.slice(5);
-      diaEl.value = v.slice(0,10);
+    function setMsg(t) { if (msgEl) msgEl.textContent = t || ""; }
+
+    function closeCancel() {
+      window.WlExtension.closeModal({ cancelled: true });
+    }
+
+    function normalizeDDMMAA(v) {
+    
+      let s = String(v || "").replace(/[^\d]/g, "").slice(0, 6);
+      if (s.length > 2) s = s.slice(0,2) + "/" + s.slice(2);
+      if (s.length > 5) s = s.slice(0,5) + "/" + s.slice(5);
+      return s;
+    }
+
+    function parseDDMMAA(v) {
+      const m = String(v || "").trim().match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+      if (!m) return { ok:false, error:"Use 00/00/00 (DD/MM/AA)." };
+
+      const dd = Number(m[1]);
+      const mm = Number(m[2]);
+      const aa = Number(m[3]);
+      const yyyy = 2000 + aa;
+
+      const d = new Date(yyyy, mm - 1, dd);
+      const ok =
+        d.getFullYear() === yyyy &&
+        d.getMonth() === (mm - 1) &&
+        d.getDate() === dd;
+
+      if (!ok) return { ok:false, error:"Data inválida." };
+
+      return { ok:true, short:`${m[1]}/${m[2]}/${m[3]}`, full:`${m[1]}/${m[2]}/${yyyy}` };
+    }
+
+    inpData.addEventListener("input", () => {
+      inpData.value = normalizeDDMMAA(inpData.value);
       setMsg("");
     });
 
-    btnCancelar.onclick = () => window.WlExtension.closeModal({ cancelled: true });
+ 
+    btnHoje.onclick = () => {
+      boxData.style.display = "none";
+      boxHoje.style.display = "block";
+    };
 
-    btnEnviar.onclick = async () => {
-      const parsed = parseDia(diaEl.value);
-      if (!parsed.ok) { setMsg(parsed.error); return; }
+  
+    btnAnt.onclick = () => {
+      boxHoje.style.display = "none";
+      boxData.style.display = "block";
+      setTimeout(() => inpData.focus(), 10);
+    };
 
-      btnEnviar.disabled = true;
-      btnCancelar.disabled = true;
-      setMsg("Gerando histórico...");
+    document.getElementById("btn-cancelar").onclick = closeCancel;
+    document.getElementById("btn-cancelar-hoje").onclick = closeCancel;
 
-      try {
-        const html = await chamarN8n({
-          attendanceId,
-          contactId,
-          dia: parsed.display,
-          diaCurto: parsed.short,
+    document.getElementById("btn-confirmar-hoje").onclick = () => {
+      window.WlExtension.closeModal({ action: "hoje" });
+    };
 
-          numero: "@contato.numero",
-          token: "@canal.token",
-          dataFim: "@chat.datahora.fim",
-          protocolo: "@chat.codigo"
-        });
-
-        window.WlExtension.closeModal({ html });
-
-      } catch (e) {
-        window.WlExtension.closeModal({ error: String(e.message || e) });
+    document.getElementById("btn-enviar").onclick = () => {
+      const p = parseDDMMAA(inpData.value);
+      if (!p.ok) {
+        setMsg(p.error);
+        return;
       }
+      window.WlExtension.closeModal({
+        action: "anteriores",
+        data: p.short,   
+        dataFull: p.full 
+      });
     };
   }
 
-  function initExtension() {
-    window.WlExtension.initialize({
-      buttons: {
-        "attendance-view": [
-          {
-            icon_url: "https://img.icons8.com/material-sharp/15/218427/print.png",
-            text: "IMPRIMIR",
-            callback: (atendimento) => {
-              const attendanceId = atendimento?.attendanceId || atendimento?.id || "";
-              const contactId = atendimento?.contactId || atendimento?.contato?.codigo || "";
 
-              const baseUrl = window.location.href.split("?")[0];
-              const url =
-                `${baseUrl}?mode=modal` +
-                `&attendanceId=${encodeURIComponent(attendanceId)}` +
-                `&contactId=${encodeURIComponent(contactId)}`;
+  window.WlExtension.initialize({
+  buttons: {
+    "attendance-view": [
+      {
+        icon_url: "https://img.icons8.com/material-sharp/15/000000/print.png",
+        text: "IMPRIMIR",
+        callback: (atendimento) => {
 
-              window.WlExtension.modal({
-                title: "Imprimir histórico",
-                url,
-                maxWidth: "420px",
-                height: "240px",
-                callback: (ret) => {
-                  if (!ret || ret.cancelled) return;
+          const modalUrl = "https://avsystemgeo-avs.github.io/AVSCHAT-PRINT-GERAL/?mode=modal";
 
-                  if (ret.error) {
-                    window.WlExtension.alert({ message: ret.error, variant: "error" });
-                    return;
-                  }
+          window.WlExtension.modal({
+            title: "IMPRIMIR",
+            url: modalUrl,
+            maxWidth: "450px",
+            height: "280px",
+            callback: (ret) => {
+              if (!ret || ret.cancelled) return;
 
-                  if (ret.html) {
-                    abrirPrintWindow(ret.html);
-                  }
-                }
-              });
+              // por enquanto só para validar o template
+              if (ret.action === "hoje") {
+                window.WlExtension.alert({
+                  message: "Selecionado: HOJE",
+                  variant: "success"
+                });
+              }
+
+              if (ret.action === "anteriores") {
+                window.WlExtension.alert({
+                  message: `Selecionado: DIAS ANTERIORES (${ret.data})`,
+                  variant: "success"
+                });
+              }
             }
-          }
-        ]
+          });
+        }
       }
-    });
+    ]
   }
+});
 
-  const mode = getParam("mode");
-  if (mode === "modal") renderModal();
+
+  if (getParam("mode") === "modal") renderModal();
   else initExtension();
-
 </script>
 
 </body>
