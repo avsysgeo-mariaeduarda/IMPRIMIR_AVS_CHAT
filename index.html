@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -10,13 +11,17 @@
 <script src="https://fileschat.sfo2.cdn.digitaloceanspaces.com/public/libs/wlclient.js"></script>
 
 <script>
-  function getParam(name) {
-    try { return new URL(window.location.href).searchParams.get(name); }
-    catch (_) { return null; }
-  }
 
-  function renderModal() {
-    document.body.innerHTML = `
+    function getParam(name) {
+  try {
+    return new URL(window.location.href).searchParams.get(name);
+  } catch (_) {
+    return null;
+  }
+}
+
+function renderModal() {
+  document.body.innerHTML = `
     <style>
       body {
         font-family: Arial, Helvetica, sans-serif;
@@ -34,12 +39,12 @@
 
       button {
         padding: 6px 14px;
+        cursor: pointer;
         background-color: #192d3e;
         color: #ffffff;
         border: none;
         border-radius: 4px;
         font-size: 13px;
-        cursor: pointer;
       }
 
       .box {
@@ -48,18 +53,21 @@
 
       .row {
         display: flex;
-        gap: 8px;
+        gap: 6px;
         align-items: center;
-        margin-top: 8px;
+        margin-top: 10px;
       }
 
-      .row-footer {
-        margin-top: 16px;
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
       }
 
       input {
         padding: 6px;
         width: 110px;
+        border: 1px solid #000;
       }
 
       .msg {
@@ -70,158 +78,157 @@
     </style>
 
     <div class="container">
+
       <div class="actions">
-        <button id="btn-hoje">HOJE</button>
-        <button id="btn-anteriores">DIAS ANTERIORES</button>
+        <button id="btn-hoje" type="button">HOJE</button>
+        <button id="btn-anteriores" type="button">DIAS ANTERIORES</button>
       </div>
 
       <div id="box-hoje" class="box" style="display:none;">
-        <p>Será impresso o histórico de hoje.</p>
-        <div class="row row-footer">
-          <button id="btn-confirmar-hoje">CONFIRMAR</button>
-          <button id="btn-cancelar-hoje">CANCELAR</button>
+        <p>Será impresso o histórico da conversa.</p>
+        <div class="row">
+          <button id="btn-confirmar-hoje" type="button">CONFIRMAR</button>
+          <button id="btn-cancelar-hoje" type="button">CANCELAR</button>
         </div>
       </div>
 
       <div id="box-data" class="box" style="display:none;">
-        <div>INSIRA DIA ESCOLHIDO (DD/MM/AA)</div>
-
-        <div class="row">
+        <div class="col">
+          <p>INSIRA DIA ESCOLHIDO (DD/MM/AA)</p>
           <input id="inp-data" placeholder="00/00/00" maxlength="8">
-        </div>
+       </div>
 
-        <div class="row row-footer">
-          <button id="btn-enviar">CONFIRMAR</button>
-          <button id="btn-cancelar">CANCELAR</button>
+       <div class="row">
+          <button id="btn-enviar" type="button">CONFIRMAR</button>
+          <button id="btn-cancelar" type="button">CANCELAR</button>
         </div>
 
         <div id="msg" class="msg"></div>
       </div>
-    </div>
-    `;
 
-    const btnHoje = document.getElementById("btn-hoje");
-    const btnAnt = document.getElementById("btn-anteriores");
-    const boxData = document.getElementById("box-data");
-    const boxHoje = document.getElementById("box-hoje");
-    const inpData = document.getElementById("inp-data");
-    const msgEl = document.getElementById("msg");
+      </div>
+  `;
 
-    function setMsg(t) { if (msgEl) msgEl.textContent = t || ""; }
+  const btnHoje = document.getElementById("btn-hoje");
+  const btnAnt = document.getElementById("btn-anteriores");
+  const boxHoje = document.getElementById("box-hoje");
+  const boxData = document.getElementById("box-data");
+  const inpData = document.getElementById("inp-data");
+  const msgEl = document.getElementById("msg");
 
-    function closeCancel() {
-      window.WlExtension.closeModal({ cancelled: true });
+  function setMsg(t) {
+    msgEl.textContent = t || "";
+  }
+
+  function closeCancel() {
+    window.WlExtension.closeModal({ cancelled: true });
+  }
+
+   function normalizeDDMMAA(v) {
+    let s = String(v || "").replace(/[^\d]/g, "").slice(0, 6);
+    if (s.length > 2) s = s.slice(0,2) + "/" + s.slice(2);
+    if (s.length > 5) s = s.slice(0,5) + "/" + s.slice(5);
+    return s;
+  }
+
+  function parseDDMMAA(v) {
+    const m = String(v || "").match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+    if (!m) return { ok:false, error:"Use 00/00/00 (DD/MM/AA)" };
+
+    const dd = +m[1], mm = +m[2], aa = +m[3];
+    const yyyy = 2000 + aa;
+    const d = new Date(yyyy, mm - 1, dd);
+
+       if (
+      d.getFullYear() !== yyyy ||
+      d.getMonth() !== mm - 1 ||
+      d.getDate() !== dd
+    ) {
+      return { ok:false, error:"Data inválida" };
     }
 
-    function normalizeDDMMAA(v) {
-      let s = String(v || "").replace(/[^\d]/g, "").slice(0, 6);
-      if (s.length > 2) s = s.slice(0,2) + "/" + s.slice(2);
-      if (s.length > 5) s = s.slice(0,5) + "/" + s.slice(5);
-      return s;
-    }
+     return { ok:true, data:`${m[1]}/${m[2]}/${m[3]}` };
+  }
 
-    function parseDDMMAA(v) {
-      const m = String(v || "").trim().match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
-      if (!m) return { ok:false, error:"Use 00/00/00 (DD/MM/AA)." };
+   btnHoje.onclick = () => {
+    boxData.style.display = "none";
+    boxHoje.style.display = "block";
+  };
 
-      const dd = Number(m[1]);
-      const mm = Number(m[2]);
-      const aa = Number(m[3]);
-      const yyyy = 2000 + aa;
-
-      const d = new Date(yyyy, mm - 1, dd);
-      if (
-        d.getFullYear() !== yyyy ||
-        d.getMonth() !== (mm - 1) ||
-        d.getDate() !== dd
-      ) {
-        return { ok:false, error:"Data inválida." };
-      }
-
-      return { ok:true, short:\`\${m[1]}/\${m[2]}/\${m[3]}\`` };
-    }
+  btnAnt.onclick = () => {
+    boxHoje.style.display = "none";
+    boxData.style.display = "block";
+    setTimeout(() => inpData.focus(), 50);
+  };
 
     inpData.addEventListener("input", () => {
-      inpData.value = normalizeDDMMAA(inpData.value);
-      setMsg("");
-    });
-
-    btnHoje.onclick = () => {
-      boxData.style.display = "none";
-      boxHoje.style.display = "block";
-    };
-
-    btnAnt.onclick = () => {
-      boxHoje.style.display = "none";
-      boxData.style.display = "block";
-      setTimeout(() => inpData.focus(), 10);
-    };
+    inpData.value = normalizeDDMMAA(inpData.value);
+    setMsg("");
+  });
 
     document.getElementById("btn-cancelar").onclick = closeCancel;
     document.getElementById("btn-cancelar-hoje").onclick = closeCancel;
-
     document.getElementById("btn-confirmar-hoje").onclick = () => {
-      window.WlExtension.closeModal({ action: "hoje" });
-    };
+    window.WlExtension.closeModal({ action: "hoje" });
+  };
 
-    document.getElementById("btn-enviar").onclick = () => {
-      const p = parseDDMMAA(inpData.value);
-      if (!p.ok) {
-        setMsg(p.error);
-        return;
-      }
+  document.getElementById("btn-enviar").onclick = () => {
+    const p = parseDDMMAA(inpData.value);
+    if (!p.ok) return setMsg(p.error);
 
-      window.WlExtension.closeModal({
-        action: "anteriores",
-        data: p.short
-      });
-    };
-  }
-
-  function initExtension() {
-    window.WlExtension.initialize({
-      buttons: {
-        "attendance-view": [
-          {
-            icon_url: "https://img.icons8.com/material-sharp/15/000000/print.png",
-            text: "IMPRIMIR",
-            callback: () => {
-              const modalUrl =
-                "https://avsystemgeo-avs.github.io/AVSCHAT-PRINT-GERAL/?mode=modal";
-
-              window.WlExtension.modal({
-                title: "IMPRIMIR",
-                url: modalUrl,
-                maxWidth: "450px",
-                height: "280px",
-                callback: (ret) => {
-                  if (!ret || ret.cancelled) return;
-
-                  if (ret.action === "hoje") {
-                    window.WlExtension.alert({
-                      message: "Selecionado: HOJE",
-                      variant: "success"
-                    });
-                  } else if (ret.action === "anteriores") {
-                    window.WlExtension.alert({
-                      message: \`Selecionado: DIAS ANTERIORES (\${ret.data})\`,
-                      variant: "success"
-                    });
-                  }
-                }
-              });
-            }
-          }
-        ]
-      }
+    window.WlExtension.closeModal({
+      action: "anteriores",
+      data: p.data
     });
-  }
+  };
+}
 
-  if (getParam("mode") === "modal") {
-    renderModal();
-  } else {
-    initExtension();
-  }
+function initExtension() {
+  window.WlExtension.initialize({
+    buttons: {
+      "attendance-view": [
+        {
+          icon_url: "https://img.icons8.com/material-sharp/15/000000/print.png",
+          text: "IMPRIMIR",
+          callback: () => {
+
+            const modalUrl =
+              "https://avsysgeo-mariaeduarda.github.io/IMPRIMIR_AVS_CHAT/?mode=modal";
+
+            window.WlExtension.modal({
+              title: "IMPRIMIR",
+              url: modalUrl,
+              maxWidth: "450px",
+              height: "280px",
+              callback: (ret) => {
+                if (!ret || ret.cancelled) return;
+
+                if (ret.action === "hoje") {
+                  window.WlExtension.alert({
+                    message: "Selecionado: HOJE",
+                    variant: "success"
+                  });
+                }
+if (ret.action === "anteriores") {
+                  window.WlExtension.alert({
+                    message: "Selecionado: " + ret.data,
+                    variant: "success"
+                  });
+                }
+                 }
+            });
+          }
+           }
+      ]
+    }
+  });
+}
+
+if (getParam("mode") === "modal") {
+  renderModal();
+} else {
+  initExtension();
+}
 </script>
 
 </body>
