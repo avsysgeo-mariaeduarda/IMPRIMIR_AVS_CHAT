@@ -77,8 +77,8 @@ function renderModal() {
       }
     </style>
 
-    <div class="container">
 
+    <div class="container">
       <div class="actions">
         <button id="btn-hoje" type="button">HOJE</button>
         <button id="btn-anteriores" type="button">DIAS ANTERIORES</button>
@@ -96,17 +96,17 @@ function renderModal() {
         <div class="col">
           <p>INSIRA DIA ESCOLHIDO (DD/MM/AA)</p>
           <input id="inp-data" placeholder="00/00/00" maxlength="8">
-       </div>
+        </div>
 
-       <div class="row">
+        <div class="row">
           <button id="btn-enviar" type="button">CONFIRMAR</button>
           <button id="btn-cancelar" type="button">CANCELAR</button>
         </div>
 
         <div id="msg" class="msg"></div>
       </div>
+    </div>
 
-      </div>
   `;
 
   const btnHoje = document.getElementById("btn-hoje");
@@ -117,8 +117,9 @@ function renderModal() {
   const msgEl = document.getElementById("msg");
 
   function setMsg(t) {
-    msgEl.textContent = t || "";
+    if (msgEl) msgEl.textContent = t || "";
   }
+
 
   function closeCancel() {
     window.WlExtension.closeModal({ cancelled: true });
@@ -139,7 +140,7 @@ function renderModal() {
     const yyyy = 2000 + aa;
     const d = new Date(yyyy, mm - 1, dd);
 
-       if (
+     if (
       d.getFullYear() !== yyyy ||
       d.getMonth() !== mm - 1 ||
       d.getDate() !== dd
@@ -161,10 +162,12 @@ function renderModal() {
     setTimeout(() => inpData.focus(), 50);
   };
 
+  if (inpData) {
     inpData.addEventListener("input", () => {
-    inpData.value = normalizeDDMMAA(inpData.value);
-    setMsg("");
-  });
+      inpData.value = normalizeDDMMAA(inpData.value);
+      setMsg("");
+    });
+  }
 
     document.getElementById("btn-cancelar").onclick = closeCancel;
     document.getElementById("btn-cancelar-hoje").onclick = closeCancel;
@@ -173,7 +176,7 @@ function renderModal() {
   };
 
   document.getElementById("btn-enviar").onclick = () => {
-    const p = parseDDMMAA(inpData.value);
+    const p = parseDDMMAA(inpData ? inpData.value : "");
     if (!p.ok) return setMsg(p.error);
 
     window.WlExtension.closeModal({
