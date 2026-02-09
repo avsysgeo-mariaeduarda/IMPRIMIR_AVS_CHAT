@@ -20,200 +20,208 @@
     <style>
       body {
         font-family: Arial, Helvetica, sans-serif;
-        margin: 0;
       }
 
       .container {
         padding: 12px 16px;
-        height: 100vh;
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;         
       }
 
       .actions {
         display: flex;
-        gap: 8px;        
+        gap: 8px;
+        margin-bottom: 16px;
       }
 
       button {
-        padding: 6px 14px;      
-        background-color: #192d3e; 
-        color: #ffffff;            
-        border: none;             
-        border-radius: 4px;             
+        padding: 6px 14px;
+        background-color: #192d3e;
+        color: #ffffff;
+        border: none;
+        border-radius: 4px;
         font-size: 13px;
+        cursor: pointer;
       }
 
-      .content {
-        flex: 1;                   
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-      
       .box {
-        display: none;
+        margin-top: 12px;
       }
 
-     .field {
+      .row {
         display: flex;
-        flex-direction: column;
-        gap: 6px;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
+      }
+
+      .row-footer {
+        margin-top: 16px;
       }
 
       input {
         padding: 6px;
         width: 110px;
-        box-sizing: border-box;
       }
 
       .msg {
         margin-top: 6px;
         color: #b00020;
         font-size: 12px;
-        min-height: 14px;
-      }
-      .footer {
-        display: flex;
-        gap: 8px;
-        padding-top: 8px;
       }
     </style>
 
     <div class="container">
-    <div class="actions">
-      <button id="btn-hoje" type="button">HOJE</button>
-      <button id="btn-anteriores" type="button">DIAS ANTERIORES</button>
-    </div>
-
-    <div class="content">
-      <div id="box-hoje" class="box">
-        <p>Será impresso o histórico de hoje.</p>
+      <div class="actions">
+        <button id="btn-hoje">HOJE</button>
+        <button id="btn-anteriores">DIAS ANTERIORES</button>
       </div>
 
-      <div id="box-data" class="box">
-        <div class="field">
-          <div>INSIRA DIA ESCOLHIDO (DD/MM/AA)</div>
+      <div id="box-hoje" class="box" style="display:none;">
+        <p>Será impresso o histórico de hoje.</p>
+        <div class="row row-footer">
+          <button id="btn-confirmar-hoje">CONFIRMAR</button>
+          <button id="btn-cancelar-hoje">CANCELAR</button>
+        </div>
+      </div>
+
+      <div id="box-data" class="box" style="display:none;">
+        <div>INSIRA DIA ESCOLHIDO (DD/MM/AA)</div>
+
+        <div class="row">
           <input id="inp-data" placeholder="00/00/00" maxlength="8">
         </div>
+
+        <div class="row row-footer">
+          <button id="btn-enviar">CONFIRMAR</button>
+          <button id="btn-cancelar">CANCELAR</button>
+        </div>
+
         <div id="msg" class="msg"></div>
       </div>
     </div>
-
-    <div class="footer">
-      
-      <button id="btn-enviar" type="button">CONFIRMAR</button>
-      <button id="btn-cancelar" type="button">CANCELAR</button>
-
-      <button id="btn-confirmar-hoje" type="button" style="display:none;">CONFIRMAR</button>
-      <button id="btn-cancelar-hoje" type="button" style="display:none;">CANCELAR</button>
-    </div>
-  </div>
     `;
 
     const btnHoje = document.getElementById("btn-hoje");
     const btnAnt = document.getElementById("btn-anteriores");
-    
     const boxData = document.getElementById("box-data");
+    const boxHoje = document.getElementById("box-hoje");
     const inpData = document.getElementById("inp-data");
     const msgEl = document.getElementById("msg");
-    const boxHoje = document.getElementById("box-hoje");
 
-    const btnEnviar = document.getElementById("btn-enviar");
-    const btnCancelar = document.getElementById("btn-cancelar");
-    const btnConfirmarHoje = document.getElementById("btn-confirmar-hoje");
-    const btnCancelarHoje = document.getElementById("btn-cancelar-hoje");
-  
     function setMsg(t) { if (msgEl) msgEl.textContent = t || ""; }
-  
+
     function closeCancel() {
       window.WlExtension.closeModal({ cancelled: true });
     }
-  
+
     function normalizeDDMMAA(v) {
       let s = String(v || "").replace(/[^\d]/g, "").slice(0, 6);
       if (s.length > 2) s = s.slice(0,2) + "/" + s.slice(2);
       if (s.length > 5) s = s.slice(0,5) + "/" + s.slice(5);
       return s;
     }
-  
+
     function parseDDMMAA(v) {
       const m = String(v || "").trim().match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
       if (!m) return { ok:false, error:"Use 00/00/00 (DD/MM/AA)." };
-  
+
       const dd = Number(m[1]);
       const mm = Number(m[2]);
       const aa = Number(m[3]);
       const yyyy = 2000 + aa;
-  
+
       const d = new Date(yyyy, mm - 1, dd);
-      const ok =
-        d.getFullYear() === yyyy &&
-        d.getMonth() === (mm - 1) &&
-        d.getDate() === dd;
-  
-      if (!ok) return { ok:false, error:"Data inválida." };
-  
-      return { ok:true, short:`${m[1]}/${m[2]}/${m[3]}`, full:`${m[1]}/${m[2]}/${yyyy}` };
+      if (
+        d.getFullYear() !== yyyy ||
+        d.getMonth() !== (mm - 1) ||
+        d.getDate() !== dd
+      ) {
+        return { ok:false, error:"Data inválida." };
+      }
+
+      return { ok:true, short:\`\${m[1]}/\${m[2]}/\${m[3]}\`` };
     }
-  
+
     inpData.addEventListener("input", () => {
       inpData.value = normalizeDDMMAA(inpData.value);
       setMsg("");
     });
-  
-    // alterna o rodapé conforme a tela
-    function showFooterForHoje() {
-      btnEnviar.style.display = "none";
-      btnCancelar.style.display = "none";
-      btnConfirmarHoje.style.display = "inline-block";
-      btnCancelarHoje.style.display = "inline-block";
-    }
-  
-    function showFooterForData() {
-      btnConfirmarHoje.style.display = "none";
-      btnCancelarHoje.style.display = "none";
-      btnEnviar.style.display = "inline-block";
-      btnCancelar.style.display = "inline-block";
-    }
-  
+
     btnHoje.onclick = () => {
       boxData.style.display = "none";
       boxHoje.style.display = "block";
-      showFooterForHoje();
-      setMsg("");
     };
-  
+
     btnAnt.onclick = () => {
       boxHoje.style.display = "none";
       boxData.style.display = "block";
-      showFooterForData();
       setTimeout(() => inpData.focus(), 10);
-      setMsg("");
     };
-  
-    btnCancelar.onclick = closeCancel;
-    btnCancelarHoje.onclick = closeCancel;
-  
-    btnConfirmarHoje.onclick = () => {
+
+    document.getElementById("btn-cancelar").onclick = closeCancel;
+    document.getElementById("btn-cancelar-hoje").onclick = closeCancel;
+
+    document.getElementById("btn-confirmar-hoje").onclick = () => {
       window.WlExtension.closeModal({ action: "hoje" });
     };
-  
-    btnEnviar.onclick = () => {
+
+    document.getElementById("btn-enviar").onclick = () => {
       const p = parseDDMMAA(inpData.value);
-      if (!p.ok) { setMsg(p.error); return; }
-  
+      if (!p.ok) {
+        setMsg(p.error);
+        return;
+      }
+
       window.WlExtension.closeModal({
         action: "anteriores",
-        data: p.short,
-        dataFull: p.full
+        data: p.short
       });
     };
-  
-    btnHoje.click();
-}
+  }
+
+  function initExtension() {
+    window.WlExtension.initialize({
+      buttons: {
+        "attendance-view": [
+          {
+            icon_url: "https://img.icons8.com/material-sharp/15/000000/print.png",
+            text: "IMPRIMIR",
+            callback: () => {
+              const modalUrl =
+                "https://avsystemgeo-avs.github.io/AVSCHAT-PRINT-GERAL/?mode=modal";
+
+              window.WlExtension.modal({
+                title: "IMPRIMIR",
+                url: modalUrl,
+                maxWidth: "450px",
+                height: "280px",
+                callback: (ret) => {
+                  if (!ret || ret.cancelled) return;
+
+                  if (ret.action === "hoje") {
+                    window.WlExtension.alert({
+                      message: "Selecionado: HOJE",
+                      variant: "success"
+                    });
+                  } else if (ret.action === "anteriores") {
+                    window.WlExtension.alert({
+                      message: \`Selecionado: DIAS ANTERIORES (\${ret.data})\`,
+                      variant: "success"
+                    });
+                  }
+                }
+              });
+            }
+          }
+        ]
+      }
+    });
+  }
+
+  if (getParam("mode") === "modal") {
+    renderModal();
+  } else {
+    initExtension();
+  }
 </script>
 
 </body>
