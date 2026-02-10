@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -11,8 +10,7 @@
 <script src="https://fileschat.sfo2.cdn.digitaloceanspaces.com/public/libs/wlclient.js"></script>
 
 <script>
-
-    function getParam(name) {
+function getParam(name) {
   try {
     return new URL(window.location.href).searchParams.get(name);
   } catch (_) {
@@ -25,6 +23,7 @@ function renderModal() {
     <style>
       body {
         font-family: Arial, Helvetica, sans-serif;
+        margin: 0;
       }
 
       .container {
@@ -47,13 +46,11 @@ function renderModal() {
         font-size: 13px;
       }
 
-      .box {
-        margin-top: 12px;
-      }
+      .box { margin-top: 12px; }
 
       .row {
         display: flex;
-        gap: 6px;
+        gap: 8px;
         align-items: center;
         margin-top: 10px;
       }
@@ -84,7 +81,7 @@ function renderModal() {
       </div>
 
       <div id="box-hoje" class="box" style="display:none;">
-       
+        <p>Imprimir</p>
         <div class="row">
           <button id="btn-confirmar-hoje" type="button">CONFIRMAR</button>
           <button id="btn-cancelar-hoje" type="button">CANCELAR</button>
@@ -105,7 +102,6 @@ function renderModal() {
         <div id="msg" class="msg"></div>
       </div>
     </div>
-
   `;
 
   const btnHoje = document.getElementById("btn-hoje");
@@ -119,15 +115,14 @@ function renderModal() {
     if (msgEl) msgEl.textContent = t || "";
   }
 
-
   function closeCancel() {
     window.WlExtension.closeModal({ cancelled: true });
   }
 
-   function normalizeDDMMAA(v) {
+  function normalizeDDMMAA(v) {
     let s = String(v || "").replace(/[^\d]/g, "").slice(0, 6);
-    if (s.length > 2) s = s.slice(0,2) + "/" + s.slice(2);
-    if (s.length > 5) s = s.slice(0,5) + "/" + s.slice(5);
+    if (s.length > 2) s = s.slice(0, 2) + "/" + s.slice(2);
+    if (s.length > 5) s = s.slice(0, 5) + "/" + s.slice(5);
     return s;
   }
 
@@ -139,50 +134,56 @@ function renderModal() {
     const yyyy = 2000 + aa;
     const d = new Date(yyyy, mm - 1, dd);
 
-     if (
-      d.getFullYear() !== yyyy ||
-      d.getMonth() !== mm - 1 ||
-      d.getDate() !== dd
-    ) {
+    if (d.getFullYear() !== yyyy || d.getMonth() !== (mm - 1) || d.getDate() !== dd) {
       return { ok:false, error:"Data inválida" };
     }
 
-     return { ok:true, data:`${m[1]}/${m[2]}/${m[3]}` };
+    return { ok:true, data: m[1] + "/" + m[2] + "/" + m[3] };
   }
 
-   btnHoje.onclick = () => {
+  btnHoje.onclick = function () {
     boxData.style.display = "none";
     boxHoje.style.display = "block";
   };
 
-  btnAnt.onclick = () => {
+  btnAnt.onclick = function () {
     boxHoje.style.display = "none";
     boxData.style.display = "block";
-    setTimeout(() => inpData.focus(), 50);
+    setTimeout(function () { if (inpData) inpData.focus(); }, 50);
   };
 
   if (inpData) {
-    inpData.addEventListener("input", () => {
+    inpData.addEventListener("input", function () {
       inpData.value = normalizeDDMMAA(inpData.value);
       setMsg("");
     });
   }
 
-    document.getElementById("btn-cancelar").onclick = closeCancel;
-    document.getElementById("btn-cancelar-hoje").onclick = closeCancel;
-    document.getElementById("btn-confirmar-hoje").onclick = () => {
-    window.WlExtension.closeModal({ action: "hoje" });
-  };
+  const btnCancelar = document.getElementById("btn-cancelar");
+  const btnCancelarHoje = document.getElementById("btn-cancelar-hoje");
+  const btnConfirmarHoje = document.getElementById("btn-confirmar-hoje");
+  const btnEnviar = document.getElementById("btn-enviar");
 
-  document.getElementById("btn-enviar").onclick = () => {
-    const p = parseDDMMAA(inpData ? inpData.value : "");
-    if (!p.ok) return setMsg(p.error);
+  if (btnCancelar) btnCancelar.onclick = closeCancel;
+  if (btnCancelarHoje) btnCancelarHoje.onclick = closeCancel;
 
-    window.WlExtension.closeModal({
-      action: "anteriores",
-      data: p.data
-    });
-  };
+  if (btnConfirmarHoje) {
+    btnConfirmarHoje.onclick = function () {
+      window.WlExtension.closeModal({ action: "hoje" });
+    };
+  }
+
+  if (btnEnviar) {
+    btnEnviar.onclick = function () {
+      const p = parseDDMMAA(inpData ? inpData.value : "");
+      if (!p.ok) return setMsg(p.error);
+
+      window.WlExtension.closeModal({
+        action: "anteriores",
+        data: p.data
+      });
+    };
+  }
 }
 
 function initExtension() {
@@ -192,17 +193,15 @@ function initExtension() {
         {
           icon_url: "https://img.icons8.com/material-sharp/15/000000/print.png",
           text: "IMPRIMIR",
-          callback: () => {
-
-            const modalUrl =
-              "https://avsysgeo-mariaeduarda.github.io/IMPRIMIR_AVS_CHAT/?mode=modal";
+          callback: function () {
+            const modalUrl = "https://avsysgeo-mariaeduarda.github.io/IMPRIMIR_AVS_CHAT/?mode=modal";
 
             window.WlExtension.modal({
               title: "IMPRIMIR",
               url: modalUrl,
               maxWidth: "450px",
               height: "280px",
-              callback: (ret) => {
+              callback: function (ret) {
                 if (!ret || ret.cancelled) return;
 
                 if (ret.action === "hoje") {
@@ -210,8 +209,7 @@ function initExtension() {
                     message: "Selecionado: HOJE",
                     variant: "success"
                   });
-                }
-                if (ret.action === "anteriores") {
+                } else if (ret.action === "anteriores") {
                   window.WlExtension.alert({
                     message: "Selecionado: " + ret.data,
                     variant: "success"
