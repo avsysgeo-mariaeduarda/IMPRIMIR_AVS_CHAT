@@ -10,225 +10,196 @@
 <script src="https://fileschat.sfo2.cdn.digitaloceanspaces.com/public/libs/wlclient.js"></script>
 
 <script>
-function getParam(name) {
-  try {
-    return new URL(window.location.href).searchParams.get(name);
-  } catch (_) {
-    return null;
+catch (_) { return null; }
   }
-}
 
 function renderModal() {
   document.body.innerHTML = `
     <style>
-      body {
-        font-family: Arial, Helvetica, sans-serif;
-        margin: 0;
-      }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+  }
 
-      .container {
-        padding: 12px 16px;
-      }
+  .container {
+    padding: 12px 16px;
+  }
 
-      .actions {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 16px;
-      }
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
 
-      button {
-        padding: 6px 14px;
-        cursor: pointer;
-        background-color: #192d3e;
-        color: #ffffff;
-        border: none;
-        border-radius: 4px;
-        font-size: 13px;
-      }
+  button {
+    padding: 6px 14px;
+    cursor: pointer;
+    background-color: #192d3e;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+  }
 
-      .box { margin-top: 12px; }
+  .box {
+    margin-top: 12px;
+  }
 
-      .row {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        margin-top: 10px;
-      }
+  .row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
 
-      .col {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
 
-      input {
-        padding: 6px;
-        width: 110px;
-        border: 1px solid #000;
-      }
+  input {
+    padding: 6px;
+    width: 110px;
+  }
 
-      .msg {
-        margin-top: 6px;
-        color: #b00020;
-        font-size: 12px;
-      }
-    </style>
+  .msg {
+    margin-top: 6px;
+    color: #b00020;
+    font-size: 12px;
+  }
+</style>
 
     <div class="container">
       <div class="actions">
-        <button id="btn-hoje" type="button">HOJE</button>
-        <button id="btn-anteriores" type="button">DIAS ANTERIORES</button>
+        <button id="btn-hoje">HOJE</button>
+        <button id="btn-anteriores">DIAS ANTERIORES</button>
       </div>
 
       <div id="box-hoje" class="box" style="display:none;">
-        <p>Imprimir</p>
+        <p>Ao prosseguir, será impresso o histórico da conversa de hoje.</p> 
         <div class="row">
-          <button id="btn-confirmar-hoje" type="button">CONFIRMAR</button>
-          <button id="btn-cancelar-hoje" type="button">CANCELAR</button>
+          <button id="btn-confirmar-hoje">CONFIRMAR</button>
+          <button id="btn-cancelar-hoje">CANCELAR</button>
         </div>
       </div>
 
-      <div id="box-data" class="box" style="display:none;">
-        <div class="col">
-          <p>INSIRA DIA ESCOLHIDO (DD/MM/AA)</p>
-          <input id="inp-data" placeholder="00/00/00" maxlength="8">
-        </div>
-
+      <div id="box-data" class="box" style="display:none;">        
+        <p>Insira dia escolhido (DD/MM/AA)</p>   
+        <div>                     
+          <input id="inp-data" placeholder="00/00/00" maxlength="8">   
+          <input id="inp-data-antiga" placeholder="00/00/00" maxlength="8">    
+        </div>     
         <div class="row">
-          <button id="btn-enviar" type="button">CONFIRMAR</button>
-          <button id="btn-cancelar" type="button">CANCELAR</button>
+          <button id="btn-enviar">CONFIRMAR</button>
+          <button id="btn-cancelar">CANCELAR</button>
         </div>
-
         <div id="msg" class="msg"></div>
       </div>
     </div>
   `;
 
-  const btnHoje = document.getElementById("btn-hoje");
-  const btnAnt = document.getElementById("btn-anteriores");
-  const boxHoje = document.getElementById("box-hoje");
-  const boxData = document.getElementById("box-data");
-  const inpData = document.getElementById("inp-data");
-  const msgEl = document.getElementById("msg");
+    const btnHoje = document.getElementById("btn-hoje");
+    const btnAnt = document.getElementById("btn-anteriores");
 
-  function setMsg(t) {
-    if (msgEl) msgEl.textContent = t || "";
-  }
+    const boxHoje = document.getElementById("box-hoje");
 
-  function closeCancel() {
-    window.WlExtension.closeModal({ cancelled: true });
-  }
+    function setMsg(t) { if (msgEl) msgEl.textContent = t || ""; }
 
-  function normalizeDDMMAA(v) {
-    let s = String(v || "").replace(/[^\d]/g, "").slice(0, 6);
-    if (s.length > 2) s = s.slice(0, 2) + "/" + s.slice(2);
-    if (s.length > 5) s = s.slice(0, 5) + "/" + s.slice(5);
-    return s;
-  }
-
-  function parseDDMMAA(v) {
-    const m = String(v || "").match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
-    if (!m) return { ok:false, error:"Use 00/00/00 (DD/MM/AA)" };
-
-    const dd = +m[1], mm = +m[2], aa = +m[3];
-    const yyyy = 2000 + aa;
-    const d = new Date(yyyy, mm - 1, dd);
-
-    if (d.getFullYear() !== yyyy || d.getMonth() !== (mm - 1) || d.getDate() !== dd) {
-      return { ok:false, error:"Data inválida" };
+    function closeCancel() {
+      window.WlExtension.closeModal({ cancelled: true });
     }
 
-    return { ok:true, data: m[1] + "/" + m[2] + "/" + m[3] };
-  }
+    function normalizeDDMMAA(v) {
+    
+      let s = String(v || "").replace(/[^\d]/g, "").slice(0, 6);
+      if (s.length > 2) s = s.slice(0,2) + "/" + s.slice(2);
+      if (s.length > 5) s = s.slice(0,5) + "/" + s.slice(5);
 
-  btnHoje.onclick = function () {
-    boxData.style.display = "none";
-    boxHoje.style.display = "block";
-  };
+      const yyyy = 2000 + aa;
 
-  btnAnt.onclick = function () {
-    boxHoje.style.display = "none";
-    boxData.style.display = "block";
-    setTimeout(function () { if (inpData) inpData.focus(); }, 50);
-  };
+      const d = new Date(yyyy, mm - 1, dd);
+      const ok =
+        d.getFullYear() === yyyy &&
+        d.getMonth() === (mm - 1) &&
+        d.getDate() === dd;
 
-  if (inpData) {
-    inpData.addEventListener("input", function () {
-      inpData.value = normalizeDDMMAA(inpData.value);
+      if (!ok) return { ok:false, error:"Data inválida." };
+
+      return { ok:true, short:`${m[1]}/${m[2]}/${m[3]}`, full:`${m[1]}/${m[2]}/${yyyy}` };
+
       setMsg("");
     });
-  }
+ 
+    btnHoje.onclick = () => {
+      boxData.style.display = "none";
+      boxHoje.style.display = "block";
 
-  const btnCancelar = document.getElementById("btn-cancelar");
-  const btnCancelarHoje = document.getElementById("btn-cancelar-hoje");
-  const btnConfirmarHoje = document.getElementById("btn-confirmar-hoje");
-  const btnEnviar = document.getElementById("btn-enviar");
-
-  if (btnCancelar) btnCancelar.onclick = closeCancel;
-  if (btnCancelarHoje) btnCancelarHoje.onclick = closeCancel;
-
-  if (btnConfirmarHoje) {
-    btnConfirmarHoje.onclick = function () {
-      window.WlExtension.closeModal({ action: "hoje" });
     };
-  }
+  
+    btnAnt.onclick = () => {
+      boxHoje.style.display = "none";
+      boxData.style.display = "block";
+      setTimeout(() => inpData.focus(), 10);
 
-  if (btnEnviar) {
-    btnEnviar.onclick = function () {
-      const p = parseDDMMAA(inpData ? inpData.value : "");
-      if (!p.ok) return setMsg(p.error);
+    };
 
+    document.getElementById("btn-cancelar").onclick = closeCancel;
+
+    document.getElementById("btn-enviar").onclick = () => {
+      const p = parseDDMMAA(inpData.value);
+      if (!p.ok) {
+        setMsg(p.error);
+        return;
+      }
       window.WlExtension.closeModal({
         action: "anteriores",
-        data: p.data
+        data: p.short,   
+        dataFull: p.full 
       });
     };
   }
-}
 
-function initExtension() {
   window.WlExtension.initialize({
-    buttons: {
-      "attendance-view": [
-        {
-          icon_url: "https://img.icons8.com/material-sharp/15/000000/print.png",
-          text: "IMPRIMIR",
-          callback: function () {
-            const modalUrl = "https://avsysgeo-mariaeduarda.github.io/IMPRIMIR_AVS_CHAT/?mode=modal";
+  buttons: {
+    "attendance-view": [
+      {
+        icon_url: "https://img.icons8.com/material-sharp/15/000000/print.png",
+        text: "IMPRIMIR",
+        callback: (atendimento) => {
 
-            window.WlExtension.modal({
-              title: "IMPRIMIR",
-              url: modalUrl,
-              maxWidth: "450px",
-              height: "280px",
-              callback: function (ret) {
-                if (!ret || ret.cancelled) return;
+          const modalUrl = "https://avsystemgeo-avs.github.io/AVSCHAT-PRINT-GERAL/?mode=modal";
 
-                if (ret.action === "hoje") {
-                  window.WlExtension.alert({
-                    message: "Selecionado: HOJE",
-                    variant: "success"
-                  });
-                } else if (ret.action === "anteriores") {
-                  window.WlExtension.alert({
-                    message: "Selecionado: " + ret.data,
-                    variant: "success"
-                  });
-                }
+          window.WlExtension.modal({
+            title: "IMPRIMIR",
+            url: modalUrl,
+            maxWidth: "450px",
+            height: "280px",
+            callback: (ret) => {
+              if (!ret || ret.cancelled) return;
+
+              if (ret.action === "hoje") {
+                window.WlExtension.alert({
+                  message: "Selecionado: HOJE",
+                  variant: "success"
+                });
               }
-            });
-          }
-        }
-      ]
-    }
-  });
-}
 
-if (getParam("mode") === "modal") {
-  renderModal();
-} else {
-  initExtension();
-}
+              if (ret.action === "anteriores") {
+                window.WlExtension.alert({
+                  message: `Selecionado: DIAS ANTERIORES (${ret.data})`,
+                  variant: "success"
+                });
+              }
+            }
+          });
+        }
+      }
+    ]
+  }
+});
+
+
+  if (getParam("mode") === "modal") renderModal();
+  else initExtension();
 </script>
 
 </body>
