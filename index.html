@@ -57,12 +57,6 @@ function renderModal() {
         margin-top: 10px;
       }
 
-      .col {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
       input {
         padding: 6px;
         width: 110px;
@@ -92,10 +86,9 @@ function renderModal() {
       </div>
 
       <div id="box-data" class="box" style="display:none;">
-        <div class="col">
+
           <p>INSIRA DIA ESCOLHIDO (DD/MM/AA)</p>
           <input id="inp-data" placeholder="00/00/00" maxlength="8">
-        </div>
 
         <div class="row">
           <button id="btn-enviar" type="button">CONFIRMAR</button>
